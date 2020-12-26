@@ -1,0 +1,6 @@
+{
+	"name": "3D Exporter",
+	"description": "Allow 3D exporting of the PCB",
+	"version": "1.0",
+	"scripts": [ "main.js" ]
+}

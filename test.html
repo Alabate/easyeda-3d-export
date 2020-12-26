@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>three.js webgl - cameras</title>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
+    />
+    <link type="text/css" rel="stylesheet" href="main.css" />
+    <style>
+      b {
+        color: lightgreen;
+      }
+
+      html {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <script type="module">
+      import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.module.js";
+      import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/controls/OrbitControls.js";
+      import DataParser from "./DataParser.js";
+      import * as DataProcess from "./DataProcess.js";
+
+      let SCREEN_WIDTH = window.innerWidth;
+      let SCREEN_HEIGHT = window.innerHeight;
+      let aspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+
+      let cube;
+      let container;
+      let camera, scene, renderer, mesh;
+      let cameraRig, activeCamera, activeHelper;
+      let cameraPerspective, cameraOrtho;
+      let cameraPerspectiveHelper, cameraOrthoHelper;
+      const frustumSize = 600;
+
+      let geometries = null;
+
+      // Load 3d-data example file
+      // The following command needs to be started :
+      //      npx http-server /home/alabate/dev/easyeda-3d-export
+      // And the page accessed from http://127.0.0.1:8081/test.html
+      const request = new Request("./3d-data-example.json");
+      fetch(request)
+        .then((response) => response.json())
+        .then((json) => {
+          const parser = new DataParser();
+          const data = parser.parse(json);
+
+          // Tree js Init
+          init(data);
+          animate();
+          setInterval(interval, 10);
+        });
+
+      function init(data) {
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+
+        renderer = new THREE.WebGLRenderer();
+        renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+        document.body.appendChild(renderer.domElement);
+
+        // Lights
+        scene.add(new THREE.AmbientLight(0x666666));
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(1, 1, 1).normalize();
+        scene.add(directionalLight);
+
+        // Find all BoardOutLine shapes
+        const { border, holes } = DataProcess.getBoardOutlinePolygones(data);
+
+        // Create the shape
+        const boardShape = new THREE.Shape(
+          border.getCoordinates().map((p) => new THREE.Vector2(p.x, p.y))
+        );
+        for (const hole of holes) {
+          const vectorList = hole
+            .getCoordinates()
+            .map((p) => new THREE.Vector2(p.x, p.y));
+          boardShape.holes.push(new THREE.Path(vectorList));
+        }
+        console.log("BoardShape", boardShape);
+
+        // Test heart
+        // const x = 0,
+        //   y = 0;
+        // const heartShape = new THREE.Shape();
+        // heartShape.moveTo(x + 5, y + 5);
+        // heartShape.lineTo(x + 1, y + 1);
+        // heartShape.bezierCurveTo(x + 5, y + 5, x + 4, y, x, y);
+        // heartShape.bezierCurveTo(x - 6, y, x - 6, y + 7, x - 6, y + 7);
+        // heartShape.bezierCurveTo(x - 6, y + 11, x - 3, y + 15.4, x + 5, y + 19);
+        // heartShape.bezierCurveTo(
+        //   x + 12,
+        //   y + 15.4,
+        //   x + 16,
+        //   y + 11,
+        //   x + 16,
+        //   y + 7
+        // );
+        // heartShape.bezierCurveTo(x + 16, y + 7, x + 16, y, x + 10, y);
+        // heartShape.bezierCurveTo(x + 7, y, x + 5, y + 5, x + 5, y + 5);
+
+        const extrudeSettings = {
+          depth: 1,
+          bevelEnabled: false,
+        };
+        const geometry2 = new THREE.ExtrudeGeometry(
+          boardShape,
+          extrudeSettings
+        );
+        const material2 = new THREE.MeshPhysicalMaterial({ color: 0x00ff00 });
+        const mesh = new THREE.Mesh(geometry2, material2);
+        scene.add(mesh);
+
+        // INitial camera position
+        camera.position.z = 100;
+
+        // Controls
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 1, 0);
+        controls.update();
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+
+        renderer.render(scene, camera);
+      }
+
+      let geometriesI = 0;
+      let coordI = 0;
+      function interval() {
+        // if (geometriesI >= geometries.length) {
+        //   return;
+        // }
+        // const coords = geometries[geometriesI].getCoordinates();
+        // // Add line shape
+        // if (coordI == 0) {
+        //   console.log("Add geometry ", geometriesI);
+        //   console.log(
+        //     "Geometry type",
+        //     geometries[geometriesI].getGeometryType()
+        //   );
+        //   const testShape = new THREE.Shape();
+        //   testShape.moveTo(coords[0].x, coords[0].y);
+        //   for (const coord of coords) {
+        //     testShape.lineTo(coord.x, coord.y);
+        //   }
+        //   const extrudeSettings2 = {
+        //     depth: 1,
+        //     bevelEnabled: false,
+        //   };
+        //   const geometry3 = new THREE.ExtrudeGeometry(
+        //     testShape,
+        //     extrudeSettings2
+        //   );
+        //   const material3 = new THREE.MeshPhysicalMaterial({ color: 0xff0000 });
+        //   const mesh2 = new THREE.Mesh(geometry3, material3);
+        //   scene.add(mesh2);
+        // }
+        // // Add dots
+        // // console.log("Add point ", coordI, "of geometry", geometriesI);
+        // var dotGeometry = new THREE.Geometry();
+        // dotGeometry.vertices.push(
+        //   new THREE.Vector3(coords[coordI].x, coords[coordI].y, 2)
+        // );
+        // var dotMaterial = new THREE.PointsMaterial({
+        //   size: 1,
+        //   sizeAttenuation: false,
+        //   color: 0xffffff,
+        // });
+        // var dot = new THREE.Points(dotGeometry, dotMaterial);
+        // scene.add(dot);
+        // // Increment loop
+        // coordI++;
+        // if (coordI >= coords.length) {
+        //   coordI = 0;
+        //   geometriesI++;
+        // }
+      }
+    </script>
+  </body>
+</html>
