@@ -18,30 +18,10 @@ api("createToolbarButton", {
   ],
 });
 
-const $errorNotOn3d = api('createDialog', {
-	title: "Error: 3D View not found!",
-	content : '<div style="padding:10px;">Please open the 3D view that you want to export.</div>',
-	modal : true,
-	buttons : [{
-			text : 'OK',
-			cmd : 'dialog-close'
-		}
-	]
-});
-
 function startExport(format) {
-  // This function will get the data of the last 3D view generated
-  const data = window.exportFunction.attrFn.get3DData();
-  // TODO: Find a better way to force user to be on the 3D view,
-  // or it may use the last one the user have seen with another pcb design
-  if (data) {
-    alert("OK" + format);
-    console.log(JSON.parse(data))
-  }
-  else {
-    $errorNotOn3d.dialog('open');
-    Locale.update($errorNotOn3d);
-  }
+  const data = api("getSource", { type: "json" });
+  alert("OK" + format);
+  console.log(data);
 }
 
 // Command router

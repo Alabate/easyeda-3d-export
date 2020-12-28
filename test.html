@@ -28,7 +28,7 @@
     <script type="module">
       import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.module.js";
       import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/controls/OrbitControls.js";
-      import DataParser from "./DataParser.js";
+      import DataStore from "./DataStore.js";
       import * as DataProcess from "./DataProcess.js";
 
       let SCREEN_WIDTH = window.innerWidth;
@@ -49,20 +49,18 @@
       // The following command needs to be started :
       //      npx http-server /home/alabate/dev/easyeda-3d-export
       // And the page accessed from http://127.0.0.1:8081/test.html
-      const request = new Request("./3d-data-example.json");
+      const request = new Request("./src-data-example.json");
       fetch(request)
         .then((response) => response.json())
-        .then((json) => {
-          const parser = new DataParser();
-          const data = parser.parse(json);
+        .then((data) => {
+          const datastore = new DataStore(data);
 
           // Tree js Init
-          init(data);
+          init(datastore);
           animate();
-          setInterval(interval, 10);
         });
 
-      function init(data) {
+      function init(datastore) {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x808080);
         camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
@@ -72,7 +70,9 @@
         document.body.appendChild(renderer.domElement);
 
         // Find all BoardOutLine shapes
-        const { border, holes } = DataProcess.getBoardOutlinePolygones(data);
+        const { border, holes } = DataProcess.getBoardOutlinePolygones(
+          datastore
+        );
 
         // Create the board shape
         const boardShape = new THREE.Shape(
