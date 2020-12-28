@@ -341,14 +341,15 @@ export default class DataParser {
     out.radiusX = this.distToMM(match[3]);
     out.radiusY = this.distToMM(match[3]);
 
-    // Clocwise mode
-    // match[6] and match[7] are both true in 'clockwise' mode, and both false in 'anticlockwise' mode
-    out.rotationDirectionClockwise = match[6] === "1";
+    // Clockwise or anticlockwise mode in UI
+    out.clockwise = match[7] === "1";
 
-    // Not reversed
-    // out['5'] = split[5]
-    // out['4_7'] = match[7] === '1'
-    // out['4_5'] = match[5] === '1'
+    // This boolean seem to help to choose between the two circle that can be found
+    // when you only set two points and radius.
+    out.solution_selection = match[6] === "1";
+
+    // Always false for me
+    out.unknown_bool = match[5] === "1";
 
     console.log(out, split);
 

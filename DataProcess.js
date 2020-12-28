@@ -34,28 +34,78 @@ export function getBoardOutlinePolygones(data) {
         const coords = shape.points.map(
           (p) => new jsts.geom.Coordinate(p.x, p.y)
         );
-        let lineString = geometryFactory.createLineString(coords);
 
-        // const geometricShapeFactory = new jsts.util.GeometricShapeFactory();
-        // geometricShapeFactory.setWidth(shape.radiusX * 2);
-        // geometricShapeFactory.setHeight(shape.radiusY * 2);
+        // Only support circles
+        if (shape.radiusX != shape.radiusY) {
+          throw new Error("Ellipsis arcs not supported. Only circle arcs are.");
+        }
 
-        // // Find center
-        // // source : http://mathforum.org/library/drmath/view/53027.html
-        // const x0 =
-        //   1 /
-        //   (4 *
-        //     shape.radiusX ** 2 *
-        //     shape.radiusY ** 2 *
-        //     (shape.points[0].y - shape.points[1].y));
-        // const y0 =
-        //   1 /
-        //   (4 *
-        //     shape.radiusX ** 2 *
-        //     shape.radiusY ** 2 *
-        //     (shape.points[0].x - shape.points[1].x));
-        // geometricShapeFactory.setCentre({ x: x0, y: y0 });
-        // let lineString = geometricShapeFactory.createArc(0, Math.PI / 2);
+        // Doc to find position of center from points and radius
+        // https://www.overleaf.com/read/stpqdczjqsdz
+
+        // Set initial values
+        const r = shape.radiusX;
+        const x1 = shape.points[0].x;
+        const y1 = shape.points[0].y;
+        const x2 = shape.points[1].x;
+        const y2 = shape.points[1].y;
+
+        // Set intermediate values
+        // Dist between P1 and P2
+        const dist_p1_p2 = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        // Unit vector of the line that pass by both circle centers (M line)
+        const mx = (y1 - y2) / dist_p1_p2;
+        const my = (x2 - x1) / dist_p1_p2;
+        // P3, Point on the M line, and in the middle of P1 and P2
+        const x3 = (x1 + x2) / 2;
+        const y3 = (y1 + y2) / 2;
+
+        // Dist between P3 and circle center C1
+        let tmp = r ** 2 - (x3 - x1) ** 2 - (y3 - y1) ** 2;
+        // When P3 = C1 = C2, tmp might be equal to a very small negative value like -7.105427357601002e-15
+        // Which will cause a NaN once we applied sqrt to it
+        // This is probably because of floating point approx
+        // So we ignore values under nanometer
+        const epsilon = 10 ** -6;
+        if (Math.abs(tmp) < epsilon) {
+          tmp = 0;
+        }
+        const dist_p3_c = Math.sqrt(tmp);
+
+        // Computer circle center
+        let cx, cy;
+        if (
+          (shape.clockwise && shape.solution_selection) ||
+          (!shape.clockwise && !shape.solution_selection)
+        ) {
+          cx = x3 + dist_p3_c * mx;
+          cy = y3 + dist_p3_c * my;
+        } else {
+          cx = x3 - dist_p3_c * mx;
+          cy = y3 - dist_p3_c * my;
+        }
+
+        // Compute arc begin and end in polar coordinates
+        let theta1 = Math.atan2(y2 - cy, x2 - cx);
+        let theta2 = Math.atan2(y1 - cy, x1 - cx);
+
+        // If not clockwise, make it clockwise
+        if (!shape.clockwise) {
+          [theta1, theta2] = [theta2, theta1];
+        }
+
+        // Compute angle size in rad
+        while (theta2 < theta1) {
+          theta2 += 2 * Math.PI;
+        }
+        const angleSize = (theta2 - theta1) % (2 * Math.PI);
+
+        // Create the shape
+        const geometricShapeFactory = new jsts.util.GeometricShapeFactory();
+        geometricShapeFactory.setWidth(r * 2);
+        geometricShapeFactory.setHeight(r * 2);
+        geometricShapeFactory.setCentre({ x: cx, y: cy });
+        let lineString = geometricShapeFactory.createArc(theta1, angleSize);
 
         // To try reproduce EasyEDA behaviour, the outline has always a width of 0.3mm
         polygons.push(lineString.buffer(OUTLINE_WIDTH / 2));
@@ -66,8 +116,6 @@ export function getBoardOutlinePolygones(data) {
       }
     }
   }
-
-  console.log("All polygons", polygons);
 
   // Group polygons that intersects between them
   const groups = [];
@@ -99,8 +147,6 @@ export function getBoardOutlinePolygones(data) {
     }
   }
 
-  console.log("Polygon groups", groups);
-
   // Merge groups that have more than one item
   const mergedPolygons = [];
   for (const group of groups) {
@@ -113,14 +159,13 @@ export function getBoardOutlinePolygones(data) {
     }
   }
 
-  console.log("Merged Polygons", mergedPolygons);
-
   // The board outer border will be polygon with one internal area
   // that has the biggest bonding box area
   let borderPolygon = null;
   let maxArea = 0;
   for (const polygon of mergedPolygons) {
     if (polygon.getNumInteriorRing() == 1) {
+      console.log("Potential border", polygon);
       const area = polygon.getInteriorRingN(0).getEnvelope().getArea();
       if (area > maxArea) {
         borderPolygon = polygon;
@@ -129,7 +174,6 @@ export function getBoardOutlinePolygones(data) {
     }
   }
   const border = borderPolygon.getInteriorRingN(0);
-  console.log("Border", border);
 
   // Put every other polygons in the hole list
   const holes = [];
@@ -138,7 +182,6 @@ export function getBoardOutlinePolygones(data) {
       holes.push(polygon.getExteriorRing());
     }
   }
-  console.log("holes", holes);
 
   return { border, holes };
 }
