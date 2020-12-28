@@ -174,7 +174,6 @@ export function getBoardOutlinePolygones(data) {
   let maxArea = 0;
   for (const polygon of mergedPolygons) {
     if (polygon.getNumInteriorRing() == 1) {
-      console.log("Potential border", polygon);
       const area = polygon.getInteriorRingN(0).getEnvelope().getArea();
       if (area > maxArea) {
         borderPolygon = polygon;

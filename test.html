@@ -7,7 +7,6 @@
       name="viewport"
       content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
     />
-    <link type="text/css" rel="stylesheet" href="main.css" />
     <style>
       b {
         color: lightgreen;
@@ -85,7 +84,6 @@
             .map((p) => new THREE.Vector2(p.x, p.y));
           boardShape.holes.push(new THREE.Path(vectorList));
         }
-        console.log("BoardShape", boardShape);
 
         const boardGeometry = new THREE.ExtrudeGeometry(boardShape, {
           depth: 1,
@@ -102,7 +100,6 @@
 
         // Initial camera position
         const boardCentroid = border.getEnvelope().getCentroid();
-        console.log(boardCentroid.getX(), boardCentroid.getY());
 
         // Controls
         const controls = new OrbitControls(camera, renderer.domElement);
