@@ -10,6 +10,7 @@ const SHAPE_TYPES = [
   "CIRCLE",
   "SOLIDREGION",
   "HOLE",
+  "SVGNODE",
 ];
 
 /**
@@ -21,36 +22,13 @@ class DataStore {
      * The raw big data object
      */
     this._data = data;
-    /**
-     * Every positions in the raw json have an offset. This is the offset in hundredth of inch.
-     */
-    // this._offset = null;
-
-    // /**
-    //  * List of layers from the json
-    //  */
-    // this._layers = null;
 
     /**
      * List of shapes computed from data
-     * We also inject `_index` and `_type` in their objects
+     * We also inject `_index`, '_footprint_gid' and `_type` in their objects
      */
     this._shapes = null;
   }
-
-  /**
-   * Offset setter
-   */
-  // setOffset(x, y) {
-  //   x = Number.parseFloat(x);
-  //   y = Number.parseFloat(y);
-  //   if (!Number.isFinite(x) || !Number.isFinite(y)) {
-  //     throw new TypeError(
-  //       `X and Y are expected to be finite numbers. Got ${x} (${typeof x}) and ${y} (${typeof y})`
-  //     );
-  //   }
-  //   this._offset = { x, y };
-  // }
 
   /**
    * Offset getter
@@ -63,18 +41,37 @@ class DataStore {
   }
 
   /**
+   * Flatten _data object into a shape list. Also recurse on footprint shapes.
+   * Also inject their types in the `_type` attribute, footprint gid in `_footprint_gid` and the index in the `_index` attribute.
+   * @param {Object} data _data or footprint object
+   * @param {Array} current_list The current list of extracted shape
+   * @param {String} footprint_gid Optional parent footprint gid
+   */
+  _get_shape_list(data, current_list = [], footprint_gid = null) {
+    let shapes = current_list;
+    // Start to add main level shapes
+    for (const type of SHAPE_TYPES) {
+      if (data[type] !== undefined) {
+        for (const [index, shape] of Object.entries(data[type])) {
+          shape["_index"] = index;
+          shape["_type"] = type;
+          shape["_footprint_gid"] = footprint_gid;
+          shapes.push(shape);
+          if (type == "FOOTPRINT") {
+            shapes = this._get_shape_list(shape, shapes, shape.head.gId);
+          }
+        }
+      }
+    }
+    return shapes;
+  }
+
+  /**
    * Get a list of shape with their types in the `_type` attribute, and the index in the `_index` attribute.
    */
   get shapes() {
     if (this._shapes === null) {
-      this._shapes = [];
-      for (const type of SHAPE_TYPES) {
-        for (const [index, shape] of Object.entries(this._data[type])) {
-          shape["_index"] = index;
-          shape["_type"] = type;
-          this._shapes.push(shape);
-        }
-      }
+      this._shapes = this._get_shape_list(this._data);
     }
     return this._shapes;
   }
@@ -114,6 +111,15 @@ class DataStore {
    */
   findShapesByLayer(layerId) {
     return this.shapes.filter((s) => s.layerid == layerId);
+  }
+
+  /**
+   * Find shapes that are of the given type
+   * @param {String} type The type of the shape wanted
+   * @returns a list of shape or an empty array
+   */
+  findShapesByType(type) {
+    return this.shapes.filter((s) => s._type == type);
   }
 
   /**

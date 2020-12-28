@@ -28,6 +28,7 @@
     <script type="module">
       import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.module.js";
       import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/controls/OrbitControls.js";
+      import { OBJLoader2Parallel } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/loaders/OBJLoader2Parallel.js";
       import DataStore from "./DataStore.js";
       import * as DataProcess from "./DataProcess.js";
 
@@ -97,6 +98,20 @@
         ]);
         const boardMesh = new THREE.Mesh(boardGeometry, boardMaterial);
         scene.add(boardMesh);
+
+        // Try to get 3D shapes
+        DataProcess.get3dShapes(datastore);
+        let objLoader2Parallel = new OBJLoader2Parallel();
+        function callbackOnLoad(object3d, message) {
+          local.add(object3d);
+        }
+        objLoader2Parallel.load(
+          "https://easyeda.com/analyzer/api/3dmodel/5c06dbf3f43040c4baada5acef156c93?_=1609172673948",
+          callbackOnLoad,
+          null,
+          null,
+          null
+        );
 
         // Initial camera position
         const boardCentroid = border.getEnvelope().getCentroid();
