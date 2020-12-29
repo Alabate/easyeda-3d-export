@@ -7,7 +7,7 @@ import { OBJLoader } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/j
  */
 
 const OUTLINE_WIDTH = 0.3; // mm
-const BOARD_THICKNESS = 3; // mm
+const BOARD_THICKNESS = 1.6; // mm
 const DOWNLOAD_3D_URI = "/proxy/analyzer/api/3dmodel/";
 
 /**

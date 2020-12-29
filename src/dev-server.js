@@ -57,7 +57,7 @@ app.use("/proxy", function (clientRequest, clientResponse) {
   serverRequest.end();
 });
 
-app.use(express.static("."));
+app.use(express.static(__dirname, { index: "/dev-index.html" }));
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
