@@ -1,2 +1,9 @@
 - Integrate preview
 - Integrate export
+- Readme & documentation
+---- Additionnal TODO ---
+- Github CI - Codingstyle
+- Draw copper layers
+- Draw varnish layers
+- Try to use ObjLoader2 (parrallel ?). Currently it produce empty objects.
+- Try to find a way to get 3D objects materials/colors

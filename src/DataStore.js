@@ -16,7 +16,7 @@ const SHAPE_TYPES = [
 /**
  * Store an manipulate data from file source
  */
-export default class DataStore {
+class DataStore {
   constructor(data) {
     /**
      * The raw big data object
@@ -163,3 +163,4 @@ export default class DataStore {
     };
   }
 }
+window.extension3dExporterDataStore = DataStore;

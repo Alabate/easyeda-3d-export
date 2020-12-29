@@ -1,7 +1,3 @@
-import "https://cdnjs.cloudflare.com/ajax/libs/jsts/2.6.1/jsts.js";
-import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.module.js";
-import { OBJLoader } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/loaders/OBJLoader.js";
-
 /**
  * Processing functions applied to data parsed from json
  */
@@ -13,7 +9,7 @@ const DOWNLOAD_3D_URI = "/proxy/analyzer/api/3dmodel/";
 /**
  * Use DataStore to create 3D objects that represent a PCB
  */
-export default class Pcb3D {
+class Pcb3D {
   /**
    *
    * @param {DataStore} datastore Datastore that contain PCB sources
@@ -253,7 +249,6 @@ export default class Pcb3D {
     // Get layers ids
     const bottomLayerId = this._ds.findLayerIdByName("BottomLayer");
     const topLayerId = this._ds.findLayerIdByName("TopLayer");
-    console.log("layers", bottomLayerId, topLayerId);
 
     // Find all 3D shapes from datastore
     let shapes = this._ds
@@ -263,7 +258,7 @@ export default class Pcb3D {
     // Loader for .obj with promise that will be use in parrallel
     const loadObj = (shape) => {
       return new Promise((resolve, reject) => {
-        const loader = new OBJLoader();
+        const loader = new THREE.OBJLoader();
         loader.load(
           DOWNLOAD_3D_URI + shape.attrs.uuid,
           (obj) => resolve({ obj, shape }),
@@ -278,10 +273,10 @@ export default class Pcb3D {
     const promises = shapes.map(loadObj);
     // Download all obj files and iterate on them
     const resList = await Promise.allSettled(promises);
-    for (const { status, value } of resList) {
+    for (const { status, value, reason } of resList) {
       // Just log error, but continue
       if (status === "rejected") {
-        console.error("Fail to load .obj file", value);
+        console.error("Fail to load .obj file", reason);
         continue;
       }
       const { obj, shape } = value;
@@ -347,3 +342,4 @@ export default class Pcb3D {
     return object3ds;
   }
 }
+window.extension3dExporterPcb3D = Pcb3D;
