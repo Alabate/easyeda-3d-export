@@ -117,10 +117,11 @@ export function get3dShapes(datastore) {
     .findShapesByType("SVGNODE")
     .filter((s) => s.attrs.c_etype == "outline3D");
 
-  for (const shape of shapes) {
-    console.log("3D uuid", shape.attrs.uuid);
-    // https://easyeda.com/analyzer/api/3dmodel/5c06dbf3f43040c4baada5acef156c93?_=1609172673948
-  }
+  // for (const shape of shapes) {
+  //   console.log("3D uuid", shape.attrs.uuid);
+  //   // https://easyeda.com/analyzer/api/3dmodel/5c06dbf3f43040c4baada5acef156c93?_=1609172673948
+  // }
 
   console.log("3d shapes", shapes);
+  return shapes;
 }

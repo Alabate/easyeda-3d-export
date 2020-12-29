@@ -28,9 +28,11 @@
     <script type="module">
       import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r123/three.module.js";
       import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/controls/OrbitControls.js";
-      import { OBJLoader2Parallel } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/loaders/OBJLoader2Parallel.js";
+      import { OBJLoader } from "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/jsm/loaders/OBJLoader.js";
       import DataStore from "./DataStore.js";
       import * as DataProcess from "./DataProcess.js";
+
+      const BOARD_THICKNESS = 3;
 
       let SCREEN_WIDTH = window.innerWidth;
       let SCREEN_HEIGHT = window.innerHeight;
@@ -64,7 +66,12 @@
       function init(datastore) {
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x808080);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+
         camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+        scene.add(camera);
+        let camlight = new THREE.PointLight(0xffffff, 1);
+        camera.add(camlight);
 
         renderer = new THREE.WebGLRenderer();
         renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -87,12 +94,12 @@
         }
 
         const boardGeometry = new THREE.ExtrudeGeometry(boardShape, {
-          depth: 1,
+          depth: BOARD_THICKNESS,
           bevelEnabled: false,
         });
         var boardMaterial = new THREE.MeshFaceMaterial([
           // blue surface top and bottom
-          new THREE.MeshBasicMaterial({ color: 0x092559 }),
+          new THREE.MeshPhysicalMaterial({ color: 0x092559 }),
           // yellowish borders
           new THREE.MeshBasicMaterial({ color: 0xafaf68 }),
         ]);
@@ -100,18 +107,75 @@
         scene.add(boardMesh);
 
         // Try to get 3D shapes
-        DataProcess.get3dShapes(datastore);
-        let objLoader2Parallel = new OBJLoader2Parallel();
-        function callbackOnLoad(object3d, message) {
-          local.add(object3d);
+        // TODO load first then copy and place to avoid downloading the same file multiple times
+        // Add timestamp at the end to avoid cache like them
+        // TODO check layer to have double sided components
+        const shapes3d = DataProcess.get3dShapes(datastore);
+        for (const shape of shapes3d) {
+          // Compute origin
+          const p = shape.attrs.c_origin.split(",");
+          let origin = datastore.pointToMM({ x: p[0], y: p[1] });
+
+          // Load all shape and add them to the scene
+          console.log("Load", shape.attrs.uuid, shape);
+          const objLoader2 = new OBJLoader();
+          objLoader2.load(
+            `http://127.0.0.1:3000/proxy/analyzer/api/3dmodel/${shape.attrs.uuid}`,
+            (obj) => {
+              let transformMatrix = new THREE.Matrix4();
+
+              // Scale compute
+              const box = new THREE.Box3();
+              box.expandByObject(obj);
+              const scale =
+                datastore.distToMM(shape.attrs.c_width) /
+                (box.max.x - box.min.x);
+              transformMatrix.makeScale(scale, scale, scale);
+              obj.applyMatrix4(transformMatrix);
+
+              // Rotate
+              const rotation = shape.attrs.c_rotation
+                .split(",")
+                .map((v) => (v * Math.PI) / 180);
+              obj.rotateX(rotation[0]);
+              obj.rotateY(rotation[1]);
+              obj.rotateZ(rotation[2]);
+
+              // Now that object is centered and scaled we add it to a neutral space
+              // To do rotation and translation in the world space
+              let rObj = new THREE.Object3D();
+              rObj.add(obj);
+
+              // Center object in its space
+              const box2 = new THREE.Box3();
+              box2.expandByObject(obj);
+              rObj.translateX(-box2.max.x + (box2.max.x - box2.min.x) / 2);
+              rObj.translateY(-box2.max.y + (box2.max.y - box2.min.y) / 2);
+
+              // Object is now centered and oriented like all the others
+              let normalizedObj = new THREE.Object3D();
+              normalizedObj.add(rObj);
+
+              // Translate
+              normalizedObj.translateX(origin.x);
+              normalizedObj.translateY(origin.y);
+              normalizedObj.translateZ(BOARD_THICKNESS);
+
+              normalizedObj.traverse(function (child) {
+                console.log(child);
+                if (child.isMesh)
+                  child.material = new THREE.MeshPhysicalMaterial({
+                    color: 0xffffff,
+                  });
+              });
+
+              scene.add(normalizedObj);
+            },
+            null,
+            null,
+            null
+          );
         }
-        objLoader2Parallel.load(
-          "https://easyeda.com/analyzer/api/3dmodel/5c06dbf3f43040c4baada5acef156c93?_=1609172673948",
-          callbackOnLoad,
-          null,
-          null,
-          null
-        );
 
         // Initial camera position
         const boardCentroid = border.getEnvelope().getCentroid();
