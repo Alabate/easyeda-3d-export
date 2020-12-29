@@ -16,7 +16,7 @@ const SHAPE_TYPES = [
 /**
  * Store an manipulate data from file source
  */
-class DataStore {
+export default class DataStore {
   constructor(data) {
     /**
      * The raw big data object
@@ -95,7 +95,6 @@ class DataStore {
    * @returns The layer id found
    */
   findLayerIdByName(name) {
-    console.log(this._data.layers);
     for (const [id, layer] of Object.entries(this._data.layers)) {
       if (layer.name == name) {
         return id;
@@ -147,5 +146,3 @@ class DataStore {
     };
   }
 }
-
-export default DataStore;
