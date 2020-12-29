@@ -250,6 +250,11 @@ export default class Pcb3D {
    * @returns {Array<THREE.Object3D>} A list of 3D object that reprensent components and that can be added to a PCB scene
    */
   async _getComponents3dObjects() {
+    // Get layers ids
+    const bottomLayerId = this._ds.findLayerIdByName("BottomLayer");
+    const topLayerId = this._ds.findLayerIdByName("TopLayer");
+    console.log("layers", bottomLayerId, topLayerId);
+
     // Find all 3D shapes from datastore
     let shapes = this._ds
       .findShapesByType("SVGNODE")
@@ -281,6 +286,10 @@ export default class Pcb3D {
       }
       const { obj, shape } = value;
 
+      // Get layer id from parent footprint
+      const parentFootprint = this._ds.findShapeByGid(shape._footprint_gid);
+      const isOnBottom = parentFootprint.head.layerid == bottomLayerId;
+
       // Scale
       const box = new THREE.Box3();
       box.expandByObject(obj);
@@ -298,8 +307,6 @@ export default class Pcb3D {
       obj.rotateY(rotation[1]);
       obj.rotateZ(rotation[2]);
 
-      // Now that object is centered and scaled we add it to a neutral space
-      // To do rotation and translation in the world space
       let rObj = new THREE.Object3D();
       rObj.add(obj);
 
@@ -309,16 +316,22 @@ export default class Pcb3D {
       rObj.translateX(-box2.max.x + (box2.max.x - box2.min.x) / 2);
       rObj.translateY(-box2.max.y + (box2.max.y - box2.min.y) / 2);
 
-      // Object is now centered and oriented like all the others
+      // Now that object is centered and scaled we add it to a neutral space
+      // To do rotation and translation in the world space
       let normalizedObj = new THREE.Object3D();
       normalizedObj.add(rObj);
+
+      // Rotate to put in on bottom if required
+      if (isOnBottom) {
+        obj.rotateY(Math.PI);
+      }
 
       // Translate
       const p = shape.attrs.c_origin.split(",");
       let position = this._ds.pointToMM({ x: p[0], y: p[1] });
       normalizedObj.translateX(position.x);
       normalizedObj.translateY(position.y);
-      normalizedObj.translateZ(BOARD_THICKNESS);
+      normalizedObj.translateZ(isOnBottom ? 0 : BOARD_THICKNESS);
 
       // Set material
       normalizedObj.traverse(function (child) {

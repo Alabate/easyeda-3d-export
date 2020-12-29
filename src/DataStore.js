@@ -23,6 +23,8 @@ export default class DataStore {
      */
     this._data = data;
 
+    console.log("layers", this._data.layers);
+
     /**
      * List of shapes computed from data
      * We also inject `_index`, '_footprint_gid' and `_type` in their objects
@@ -122,6 +124,21 @@ export default class DataStore {
       types = [types];
     }
     return this.shapes.filter((s) => types.includes(s._type));
+  }
+
+  /**
+   * Find shape by gId
+   * @param {String} gId The gId of the shape
+   * @returns The shape or throw exception if not found
+   */
+  findShapeByGid(gId) {
+    const found = this.shapes.find(
+      (s) => s.gId == gId || (s.head && s.head.gId == gId)
+    );
+    if (!found) {
+      throw new Error(`Shape with gId ${gId} not found`);
+    }
+    return found;
   }
 
   /**
