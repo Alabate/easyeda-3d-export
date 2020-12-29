@@ -78,9 +78,13 @@
         document.body.appendChild(renderer.domElement);
 
         // Find all BoardOutLine shapes
-        const { border, holes } = DataProcess.getBoardOutlinePolygones(
+        const { border, borderHoles } = DataProcess.getBoardOutlinePolygones(
           datastore
         );
+        const holes = [
+          ...borderHoles,
+          ...DataProcess.getHolePolygons(datastore),
+        ];
 
         // Create the board shape
         const boardShape = new THREE.Shape(
@@ -117,7 +121,6 @@
           let origin = datastore.pointToMM({ x: p[0], y: p[1] });
 
           // Load all shape and add them to the scene
-          console.log("Load", shape.attrs.uuid, shape);
           const objLoader2 = new OBJLoader();
           objLoader2.load(
             `http://127.0.0.1:3000/proxy/analyzer/api/3dmodel/${shape.attrs.uuid}`,
@@ -162,11 +165,11 @@
               normalizedObj.translateZ(BOARD_THICKNESS);
 
               normalizedObj.traverse(function (child) {
-                console.log(child);
-                if (child.isMesh)
+                if (child.isMesh) {
                   child.material = new THREE.MeshPhysicalMaterial({
                     color: 0xffffff,
                   });
+                }
               });
 
               scene.add(normalizedObj);

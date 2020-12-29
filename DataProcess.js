@@ -18,6 +18,7 @@ export function getBoardOutlinePolygones(datastore) {
   );
 
   // For each element, create a geometry jsts object and use buffer to make it .3mm widtdh
+  const geometricShapeFactory = new jsts.util.GeometricShapeFactory();
   const geometryFactory = new jsts.geom.GeometryFactory();
   let polygons = [];
   for (const shape of outlineShapes) {
@@ -30,8 +31,17 @@ export function getBoardOutlinePolygones(datastore) {
 
       // To try reproduce EasyEDA behaviour, the outline has always a width of 0.3mm
       polygons.push(lineString.buffer(OUTLINE_WIDTH / 2));
+    } else if (shape._type === "CIRCLE") {
+      geometricShapeFactory.setSize(datastore.distToMM(shape.r) * 2);
+      geometricShapeFactory.setCentre(
+        datastore.pointToMM({ x: shape.cx, y: shape.cy })
+      );
+      const polygon = geometricShapeFactory
+        .createCircle()
+        .buffer(OUTLINE_WIDTH / 2);
+      polygons.push(polygon);
     } else {
-      console.warn(
+      console.error(
         `Unepxected shape type in BoardOutLine layer ${shape._type}`,
         shape
       );
@@ -96,14 +106,64 @@ export function getBoardOutlinePolygones(datastore) {
   const border = borderPolygon.getInteriorRingN(0);
 
   // Put every other polygons in the hole list
-  const holes = [];
+  const borderHoles = [];
   for (const polygon of mergedPolygons) {
     if (polygon != borderPolygon) {
-      holes.push(polygon.getExteriorRing());
+      borderHoles.push(polygon.getExteriorRing());
     }
   }
 
-  return { border, holes };
+  return { border, borderHoles };
+}
+
+/**
+ * Extract holes from datastore
+ * @param {DataStore} datastore A populated datastore
+ * @returns {Array} A list of polygons that are holes
+ */
+export function getHolePolygons(datastore) {
+  const holes = [];
+  const geometricShapeFactory = new jsts.util.GeometricShapeFactory();
+  const geometryFactory = new jsts.geom.GeometryFactory();
+
+  // For HOLE and VIA, attributes that interest us are the same
+  const holeShapes = datastore.findShapesByType(["HOLE", "VIA"]);
+  for (const shape of holeShapes) {
+    geometricShapeFactory.setSize(datastore.distToMM(shape.holeR) * 2);
+    geometricShapeFactory.setCentre(
+      datastore.pointToMM({ x: shape.x, y: shape.y })
+    );
+    holes.push(geometricShapeFactory.createCircle());
+  }
+
+  // For PAD that's a bit harder
+  const padShapes = datastore.findShapesByType("PAD");
+  for (const shape of padShapes) {
+    // Slot holes
+    if (
+      shape.holeR != 0 &&
+      shape.slotPointArr &&
+      shape.slotPointArr.length > 1
+    ) {
+      console.log("padShapes", shape);
+      const coords = shape.slotPointArr.map((p) => {
+        const pmm = datastore.pointToMM(p);
+        return new jsts.geom.Coordinate(pmm.x, pmm.y);
+      });
+      let lineString = geometryFactory.createLineString(coords);
+
+      // To try reproduce EasyEDA behaviour, the outline has always a width of 0.3mm
+      holes.push(lineString.buffer(datastore.distToMM(shape.holeR)));
+    }
+    // Round holes
+    else if (shape.holeR != 0) {
+      geometricShapeFactory.setSize(datastore.distToMM(shape.holeR) * 2);
+      geometricShapeFactory.setCentre(datastore.pointToMM(shape.holeCenter));
+      holes.push(geometricShapeFactory.createCircle());
+    }
+  }
+
+  return holes;
 }
 
 /**
@@ -122,6 +182,5 @@ export function get3dShapes(datastore) {
   //   // https://easyeda.com/analyzer/api/3dmodel/5c06dbf3f43040c4baada5acef156c93?_=1609172673948
   // }
 
-  console.log("3d shapes", shapes);
   return shapes;
 }

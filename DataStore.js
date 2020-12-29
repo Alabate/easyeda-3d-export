@@ -115,11 +115,14 @@ class DataStore {
 
   /**
    * Find shapes that are of the given type
-   * @param {String} type The type of the shape wanted
+   * @param {String|Array} types The type of the shape wanted. Il multiple types are given, it will match any of them.
    * @returns a list of shape or an empty array
    */
-  findShapesByType(type) {
-    return this.shapes.filter((s) => s._type == type);
+  findShapesByType(types) {
+    if (!(types instanceof Array)) {
+      types = [types];
+    }
+    return this.shapes.filter((s) => types.includes(s._type));
   }
 
   /**
