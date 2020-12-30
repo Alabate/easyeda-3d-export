@@ -1,3 +1,5 @@
+import * as jsts from "jsts";
+
 /**
  * Processing functions applied to data parsed from json
  */
@@ -9,7 +11,7 @@ const DOWNLOAD_3D_URI = "/proxy/analyzer/api/3dmodel/";
 /**
  * Use DataStore to create 3D objects that represent a PCB
  */
-class Pcb3D {
+export default class Pcb3D {
   /**
    *
    * @param {DataStore} datastore Datastore that contain PCB sources
@@ -342,4 +344,3 @@ class Pcb3D {
     return object3ds;
   }
 }
-window.extension3dExporterPcb3D = Pcb3D;

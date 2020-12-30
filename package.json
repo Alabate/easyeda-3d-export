@@ -4,11 +4,17 @@
   "description": "",
   "main": "src/dev-server.js",
   "dependencies": {
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "jsts": "^2.6.1",
+    "three": "^0.124.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "webpack": "^5.11.1",
+    "webpack-cli": "^4.3.0"
+  },
   "scripts": {
-    "start": "node src/dev-server.js"
+    "start": "node src/dev-server.js",
+    "webpack": "webpack"
   },
   "author": "Alabate <aurelien@labate.me>",
   "license": "MIT"
