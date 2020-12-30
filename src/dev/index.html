@@ -25,9 +25,8 @@
   </head>
 
   <body>
-    <script src="./DataStore.js"></script>
-    <script src="./Pcb3D.js"></script>
-    <script src="./utilities.js"></script>
+    <script src="http://localhost:9000/webpack-dev-server.js"></script>
+
     <script type="module">
       const BOARD_THICKNESS = 3;
 
@@ -37,38 +36,19 @@
       let renderer, scene, camera;
 
       // Load js dependencies like in plugin main.js
-      const loadJs = window.window.extension3dExporterLoadJs;
-      loadJs("https://cdn.jsdelivr.net/npm/jsts@2.6.1/dist/jsts.js")
-        .then(() =>
-          loadJs(
-            "https://cdn.jsdelivr.net/npm/three@0.123.0/build/three.min.js"
-          )
-        )
-        .then(() =>
-          loadJs(
-            "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/js/loaders/OBJLoader.js"
-          )
-        )
-        .then(() =>
-          loadJs(
-            "https://cdn.jsdelivr.net/npm/three@0.123.0/examples/js/controls/OrbitControls.js"
-          )
-        )
-        .then(() => {
-          // Load 3d-data example file
-          // The following command needs to be started :
-          //      npx http-server /home/alabate/dev/easyeda-3d-export
-          // And the page accessed from http://127.0.0.1:8081/test.html
-          const request = new Request("./dev-exemple-src.json");
-          fetch(request)
-            .then((response) => response.json())
-            .then((data) => {
-              const datastore = new DataStore(data);
+      // Load 3d-data example file
+      // The following command needs to be started :
+      //      npx http-server /home/alabate/dev/easyeda-3d-export
+      // And the page accessed from http://127.0.0.1:8081/test.html
+      const request = new Request("./dev-exemple-src.json");
+      fetch(request)
+        .then((response) => response.json())
+        .then((data) => {
+          const datastore = new DataStore(data);
 
-              // Tree js Init
-              init(datastore);
-              animate();
-            });
+          // Tree js Init
+          init(datastore);
+          animate();
         });
 
       function init(datastore) {

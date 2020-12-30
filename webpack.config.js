@@ -7,4 +7,19 @@ module.exports = {
     filename: "main.js",
     path: path.resolve(__dirname, "dist"),
   },
+  watch: true,
+  watchOptions: {
+    aggregateTimeout: 200,
+    poll: 1000,
+  },
+  devServer: {
+    watchContentBase: true,
+    contentBase: [
+      path.join(__dirname, "src/dev"),
+      path.join(__dirname, "dist"),
+    ],
+    contentBasePublicPath: ["/", "/dist"],
+    index: "index.html",
+    port: 9000,
+  },
 };
