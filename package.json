@@ -14,8 +14,8 @@
     "webpack-dev-server": "^3.11.1"
   },
   "scripts": {
-    "start": "node src/dev-server.js",
-    "webpack": "webpack"
+    "start": "webpack serve --open --config webpack.dev.js",
+    "build": "webpack --config webpack.prod.js"
   },
   "author": "Alabate <aurelien@labate.me>",
   "license": "MIT"
