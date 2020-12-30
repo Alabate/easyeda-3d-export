@@ -21,75 +21,214 @@
         margin: 0;
         padding: 0;
       }
+
+      #toolbar {
+        width: 100%;
+        min-height: 32px;
+        background-color: #eeeeee;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+      }
+      #toolbar > * {
+        margin-right: 8px;
+        padding: 8px;
+        background-color: #dddddd;
+      }
     </style>
+
+    <link
+      rel="stylesheet"
+      href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"
+    />
   </head>
 
   <body>
+    <div id="toolbar">
+      <span>Toolbar</span>
+    </div>
     <script src="http://localhost:9000/webpack-dev-server.js"></script>
+    <!-- EasyEDA use an old version of jquery -->
+    <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script>
+      /***
+       * EasyEDA API Mock
+       */
+      const cmds = {};
+      let exemple_src_json = null;
 
-    <script type="module">
-      const BOARD_THICKNESS = 3;
-
-      const SCREEN_WIDTH = window.innerWidth;
-      const SCREEN_HEIGHT = window.innerHeight;
-
-      let renderer, scene, camera;
-
-      // Load js dependencies like in plugin main.js
-      // Load 3d-data example file
-      // The following command needs to be started :
-      //      npx http-server /home/alabate/dev/easyeda-3d-export
-      // And the page accessed from http://127.0.0.1:8081/test.html
-      const request = new Request("./dev-exemple-src.json");
+      // Get sources available for later use
+      const request = new Request("./exemple-src.json");
       fetch(request)
         .then((response) => response.json())
         .then((data) => {
-          const datastore = new DataStore(data);
-
-          // Tree js Init
-          init(datastore);
-          animate();
+          exemple_src_json = data;
         });
 
-      function init(datastore) {
-        // Scene
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x808080);
+      // Auto open my dialog
+      setTimeout(() => {
+        callCmd("extension-3dExporter-preview");
+      }, 500);
 
-        // Cameras
-        camera = new THREE.PerspectiveCamera(
-          75,
-          SCREEN_WIDTH / SCREEN_HEIGHT,
-          0.1,
-          1000
-        );
-        scene.add(camera);
+      /**
+       * Called by api('createToolbarButton')
+       * Add a button with menu on the mock toolbar
+       */
+      function apiCreateToolbarButton(opt) {
+        let html = `<strong>${opt.title}</strong><br/><ul>`;
+        for (const item of opt.menu) {
+          html += `<li><a href="#" onclick="callCmd('${item.cmd}'); return false;">${item.text}</a></li>`;
+        }
+        html += "</ul>";
 
-        // Lights
-        scene.add(new THREE.AmbientLight(0xffffff, 0.1));
-        camera.add(new THREE.PointLight(0xffffff, 1));
-
-        // Renderer
-        renderer = new THREE.WebGLRenderer();
-        renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-        document.body.appendChild(renderer.domElement);
-
-        // Add PCB to scene
-        const pcb3d = new Pcb3D(datastore);
-        pcb3d.addToScene(scene);
-
-        // Controls
-        const boardCentroid = pcb3d.getPcbBoardCentroid();
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        camera.position.set(boardCentroid.getX(), boardCentroid.getY(), 100);
-        controls.target.set(boardCentroid.getX(), boardCentroid.getY(), 0);
-        controls.update();
+        const div = document.createElement("div");
+        div.innerHTML = html;
+        document.getElementById("toolbar").appendChild(div);
       }
 
-      function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
+      /**
+       * Called by api('createCommand')
+       * Add a custom command that can be executed on button press
+       */
+      function apiCreateCommand(opt) {
+        Object.assign(cmds, opt);
       }
+
+      /**
+       * Called by api('getSource')
+       * Get json source from exemple file
+       */
+      function apiGetSource(opt) {
+        if (opt.type !== "json") {
+          throw new Error("getSource type not mocked" + opt.type);
+        }
+        if (exemple_src_json === null) {
+          throw new Error("Exemple json has not been loaded yet");
+        }
+        return exemple_src_json;
+      }
+
+      /**
+       * Called by api('createDialog')
+       * Create a dialog that can be oppend later
+       */
+      function apiCreateDialog(opt) {
+        // Create div
+        const div = $(document.createElement("div"));
+        div.attr("title", opt.title);
+        div.addClass("dialog");
+        div.html(opt.content);
+
+        // add to body
+        $("body").append(div);
+
+        // Init dialog
+        div.dialog({
+          autoOpen: false,
+          height: opt.height,
+          width: opt.width,
+          modal: opt.modal,
+          buttons: {
+            Close: function () {
+              $(this).dialog("close");
+            },
+          },
+        });
+
+        return div;
+      }
+
+      /**
+       * Call a command defined by createCommand
+       */
+      function callCmd(cmd) {
+        if (cmds[cmd] === undefined) {
+          throw new Error("Custom command called, but not implmented: " + cmd);
+        }
+        cmds[cmd]();
+      }
+
+      window.api = (cmd, opt) => {
+        switch (cmd) {
+          case "createToolbarButton":
+            return apiCreateToolbarButton(opt);
+          case "createCommand":
+            return apiCreateCommand(opt);
+          case "getSource":
+            return apiGetSource(opt);
+          case "createDialog":
+            return apiCreateDialog(opt);
+          default:
+            throw new Error("Unmocked EasyEDA api call: " + cmd);
+        }
+      };
+    </script>
+    <script src="/dist/main.js"></script>
+
+    <script type="module">
+      // const BOARD_THICKNESS = 3;
+
+      // const SCREEN_WIDTH = window.innerWidth;
+      // const SCREEN_HEIGHT = window.innerHeight;
+
+      // let renderer, scene, camera;
+
+      // // Load js dependencies like in plugin main.js
+      // // Load 3d-data example file
+      // // The following command needs to be started :
+      // //      npx http-server /home/alabate/dev/easyeda-3d-export
+      // // And the page accessed from http://127.0.0.1:8081/test.html
+      // const request = new Request("./dev-exemple-src.json");
+      // fetch(request)
+      //   .then((response) => response.json())
+      //   .then((data) => {
+      //     const datastore = new DataStore(data);
+
+      //     // Tree js Init
+      //     init(datastore);
+      //     animate();
+      //   });
+
+      // function init(datastore) {
+      //   // Scene
+      //   scene = new THREE.Scene();
+      //   scene.background = new THREE.Color(0x808080);
+
+      //   // Cameras
+      //   camera = new THREE.PerspectiveCamera(
+      //     75,
+      //     SCREEN_WIDTH / SCREEN_HEIGHT,
+      //     0.1,
+      //     1000
+      //   );
+      //   scene.add(camera);
+
+      //   // Lights
+      //   scene.add(new THREE.AmbientLight(0xffffff, 0.1));
+      //   camera.add(new THREE.PointLight(0xffffff, 1));
+
+      //   // Renderer
+      //   renderer = new THREE.WebGLRenderer();
+      //   renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+      //   document.body.appendChild(renderer.domElement);
+
+      //   // Add PCB to scene
+      //   const pcb3d = new Pcb3D(datastore);
+      //   pcb3d.addToScene(scene);
+
+      //   // Controls
+      //   const boardCentroid = pcb3d.getPcbBoardCentroid();
+      //   const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      //   camera.position.set(boardCentroid.getX(), boardCentroid.getY(), 100);
+      //   controls.target.set(boardCentroid.getX(), boardCentroid.getY(), 0);
+      //   controls.update();
+      // }
+
+      // function animate() {
+      //   requestAnimationFrame(animate);
+      //   renderer.render(scene, camera);
+      // }
     </script>
   </body>
 </html>

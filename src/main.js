@@ -36,7 +36,7 @@ function init(datastore) {
   // Renderer
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
-  document.body.appendChild(renderer.domElement);
+  $("#extension-3dExporter-preview-threejs").append(renderer.domElement);
 
   // Add PCB to scene
   const pcb3d = new Pcb3D(datastore);

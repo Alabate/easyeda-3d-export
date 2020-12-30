@@ -1,4 +1,6 @@
 import * as jsts from "jsts";
+import * as THREE from "three";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 
 /**
  * Processing functions applied to data parsed from json
@@ -6,7 +8,7 @@ import * as jsts from "jsts";
 
 const OUTLINE_WIDTH = 0.3; // mm
 const BOARD_THICKNESS = 1.6; // mm
-const DOWNLOAD_3D_URI = "/proxy/analyzer/api/3dmodel/";
+const DOWNLOAD_3D_URI = "/analyzer/api/3dmodel/";
 
 /**
  * Use DataStore to create 3D objects that represent a PCB
@@ -260,7 +262,7 @@ export default class Pcb3D {
     // Loader for .obj with promise that will be use in parrallel
     const loadObj = (shape) => {
       return new Promise((resolve, reject) => {
-        const loader = new THREE.OBJLoader();
+        const loader = new OBJLoader();
         loader.load(
           DOWNLOAD_3D_URI + shape.attrs.uuid,
           (obj) => resolve({ obj, shape }),

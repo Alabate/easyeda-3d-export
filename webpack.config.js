@@ -21,5 +21,12 @@ module.exports = {
     contentBasePublicPath: ["/", "/dist"],
     index: "index.html",
     port: 9000,
+    writeToDisk: true,
+    proxy: {
+      "/analyzer/api/3dmodel": {
+        target: "https://easyeda.com",
+        changeOrigin: true,
+      },
+    },
   },
 };
