@@ -1,5 +1,6 @@
 import * as jsts from "jsts";
 import * as THREE from "three";
+import Polygon from "./Polygon";
 import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 
 /**
@@ -33,9 +34,9 @@ export default class Pcb3D {
   async addToScene(scene) {
     scene.add(this._getPcbBoardMesh());
     const component3dObjects = await this._getComponents3dObjects();
-    for (const object of component3dObjects) {
-      scene.add(object);
-    }
+    // for (const object of component3dObjects) {
+    //   scene.add(object);
+    // }
   }
 
   getPcbBoardCentroid() {
@@ -60,10 +61,16 @@ export default class Pcb3D {
 
     // Add holes
     for (const hole of holes) {
-      const vectorList = hole
-        .getCoordinates()
-        .map((p) => new THREE.Vector2(p.x, p.y));
-      boardShape.holes.push(new THREE.Path(vectorList));
+      if (hole.getCoordinates) {
+        console.error("Deprecated jsts getCoordinate", hole);
+        const vectorList = hole
+          .getCoordinates()
+          .map((p) => new THREE.Vector2(p.x, p.y));
+        boardShape.holes.push(new THREE.Path(vectorList));
+      } else {
+        const vectorList = hole.points.map((p) => new THREE.Vector2(p.x, p.y));
+        boardShape.holes.push(new THREE.Path(vectorList));
+      }
     }
 
     // Extrude it
@@ -209,11 +216,9 @@ export default class Pcb3D {
     // For HOLE and VIA, attributes that we use are the same
     const holeShapes = this._ds.findShapesByType(["HOLE", "VIA"]);
     for (const shape of holeShapes) {
-      geometricShapeFactory.setSize(this._ds.distToMM(shape.holeR) * 2);
-      geometricShapeFactory.setCentre(
-        this._ds.pointToMM({ x: shape.x, y: shape.y })
-      );
-      holes.push(geometricShapeFactory.createCircle());
+      const r = this._ds.distToMM(shape.holeR);
+      const p = this._ds.pointToMM({ x: shape.x, y: shape.y });
+      holes.push(Polygon.createCircle(p, r));
     }
 
     // For PAD that's a bit harder because they can be "slots"
@@ -225,20 +230,16 @@ export default class Pcb3D {
         shape.slotPointArr &&
         shape.slotPointArr.length > 1
       ) {
-        const coords = shape.slotPointArr.map((p) => {
-          const pmm = this._ds.pointToMM(p);
-          return new jsts.geom.Coordinate(pmm.x, pmm.y);
-        });
-        let lineString = geometryFactory.createLineString(coords);
-
-        // To try reproduce EasyEDA behaviour, the outline has always a width of 0.3mm
-        holes.push(lineString.buffer(this._ds.distToMM(shape.holeR)));
+        const r = this._ds.distToMM(shape.holeR);
+        const points = shape.slotPointArr.map((p) => this._ds.pointToMM(p));
+        const segment = new Polygon(points);
+        holes.push(segment.buffer(r));
       }
       // Round holes
       else if (shape.holeR != 0) {
-        geometricShapeFactory.setSize(this._ds.distToMM(shape.holeR) * 2);
-        geometricShapeFactory.setCentre(this._ds.pointToMM(shape.holeCenter));
-        holes.push(geometricShapeFactory.createCircle());
+        const r = this._ds.distToMM(shape.holeR);
+        const p = this._ds.pointToMM(shape.holeCenter);
+        holes.push(Polygon.createCircle(p, r));
       }
     }
 

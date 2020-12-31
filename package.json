@@ -4,8 +4,10 @@
   "description": "",
   "main": "src/dev-server.js",
   "dependencies": {
+    "@turf/turf": "^5.1.6",
     "express": "^4.17.1",
     "jsts": "^2.6.1",
+    "polygon-clipping": "^0.15.2",
     "three": "^0.124.0"
   },
   "devDependencies": {
